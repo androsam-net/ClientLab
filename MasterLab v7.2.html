@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Control Lab v2.8 (Akurat & Responsive)</title>
+    <!-- Firebase SDK (v8 CDN) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f0f2f5; margin: 0; padding: 10px; }
+        .container { max-width: 1150px; margin: auto; background: white; border-radius: 12px; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        
+        /* Navigation Tabs */
+        .tabs { display: flex; gap: 5px; margin-bottom: 15px; border-bottom: 2px solid #ddd; overflow-x: auto; }
+        .tab-btn { flex: 1; padding: 10px; border: none; background: #e4e6eb; cursor: pointer; font-weight: bold; border-radius: 8px 8px 0 0; min-width: 130px; text-align: center; }
+        .tab-btn.active { background: #007bff; color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Summary Cards Top Bar */
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 15px; }
+        .card { padding: 10px; background: #f8f9fa; border-radius: 12px; text-align: center; border-left: 5px solid #007bff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .card h3 { margin: 0; font-size: 20px; color: #1e293b; }
+        .card p { margin: 2px 0 0 0; font-size: 11px; color: #64748b; font-weight: 600; }
+
+        /* Controls & Filter Bar */
+        .filter-bar { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+        .filter-group { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
+
+        /* View Toggle Switch */
+        .view-toggle { display: flex; background: #e2e8f0; border-radius: 8px; padding: 2px; }
+        .toggle-btn { border: none; background: transparent; padding: 6px 12px; font-size: 12px; font-weight: bold; cursor: pointer; border-radius: 6px; color: #475569; }
+        .toggle-btn.active { background: #007bff; color: white; }
+
+        /* Grid Card View Layout */
+        .pc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; max-height: 480px; overflow-y: auto; padding: 4px; }
+        .pc-card { background: #ffffff; border-radius: 12px; padding: 10px 12px; border: 1px solid #e2e8f0; border-left: 5px solid #dc3545; box-shadow: 0 2px 5px rgba(0,0,0,0.04); transition: transform 0.1s ease; }
+        .pc-card:hover { transform: translateY(-2px); }
+        .pc-card.online { border-left-color: #28a745; }
+        .pc-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+        .pc-card-title { font-weight: bold; font-size: 13px; color: #0f172a; word-break: break-word; text-transform: none !important; }
+        .pc-card-sub { font-size: 11px; color: #64748b; margin-bottom: 6px; }
+        .pc-card-app { font-size: 11px; color: #007bff; background: #f0f7ff; padding: 4px 6px; border-radius: 6px; font-weight: 500; word-break: break-word; min-height: 32px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+        /* Tables & Scrollbox */
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f8fafc; position: sticky; top: 0; cursor: pointer; user-select: none; z-index: 1; color: #334155; }
+        th:hover { background: #f1f5f9; }
+        
+        .scroll-table { max-height: 450px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px; }
+
+        .badge { padding: 3px 8px; border-radius: 6px; font-size: 10px; color: white; font-weight: bold; }
+        .bg-success { background: #28a745; }
+        .bg-danger { background: #dc3545; }
+
+        /* Forms & Inputs */
+        .form-group { margin-bottom: 10px; }
+        label { font-weight: bold; font-size: 12px; display: block; margin-bottom: 4px; }
+        input, select { width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; }
+        
+        /* Buttons */
+        .btn { padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; width: 100%; margin-top: 5px; font-size: 12px; transition: 0.1s ease-in-out; }
+        .btn:active { transform: scale(0.98); }
+        .btn-blue { background: #007bff; }
+        .btn-red { background: #dc3545; }
+        .btn-yellow { background: #ffc107; color: #333; }
+        .btn-green { background: #28a745; }
+        .btn-purple { background: #6f42c1; }
+        .btn-sm { padding: 4px 8px; font-size: 11px; width: auto; margin: 0; }
+
+        /* Target Selection Box & Panels */
+        .target-box { background: #f0f7ff; border: 1px solid #bae6fd; padding: 12px; border-radius: 8px; margin-bottom: 12px; }
+        .target-list { max-height: 220px; overflow-y: auto; background: white; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 6px; }
+        .target-item { font-size: 12px; display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; border-bottom: 1px solid #f0f0f0; border-radius: 4px; cursor: pointer; }
+        .target-item:hover { background: #f8f9fa; }
+        .target-item input[type="checkbox"] { width: auto; margin-right: 10px; cursor: pointer; transform: scale(1.1); }
+        .target-info { display: flex; align-items: center; width: 100%; justify-content: space-between; }
+
+        .panel-section { background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; margin-bottom: 12px; }
+        .panel-title { font-size: 13px; font-weight: bold; margin-bottom: 8px; color: #1e293b; }
+        .info-bar { font-size: 11px; color: #475569; background: #e2e8f0; padding: 4px 8px; border-radius: 4px; margin-bottom: 6px; display: inline-block; font-weight: 600; }
+
+        details { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; margin-top: 6px; padding: 6px 10px; }
+        summary { font-weight: bold; cursor: pointer; color: #1e293b; font-size: 12px; }
+        .sub-tree { margin-left: 15px; padding-left: 10px; border-left: 2px solid #cbd5e1; margin-top: 4px; font-size: 11px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🖥️ Master Control Lab v2.8</h2>
+
+    <!-- TAB NAVIGATION -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab(event, 'tab1')">Monitoring</button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab2')">Pengaturan</button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab3')">Control Center</button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab4')">Analisa Siswa</button>
+    </div>
+
+    <!-- TAB 1: MONITORING REAL-TIME -->
+    <div id="tab1" class="tab-content active">
+        <div class="summary-grid">
+            <div class="card"> <h3 id="cnt-total">0</h3> <p>Total PC</p> </div>
+            <div class="card" style="border-color: #28a745;"> <h3 id="cnt-online">0</h3> <p>Online</p> </div>
+            <div class="card" style="border-color: #dc3545;"> <h3 id="cnt-offline">0</h3> <p>Offline</p> </div>
+            <div class="card" style="border-color: #17a2b8;"> <h3 id="cnt-net">0</h3> <p>Internet</p> </div>
+            <div class="card" style="border-color: #ffc107;"> <h3 id="cnt-selected">0</h3> <p>Terpilih</p> </div>
+        </div>
+
+        <!-- FILTER & TOGGLE VIEW BAR -->
+        <div class="filter-bar">
+            <div class="filter-group">
+                <select id="filter-ruangan" style="max-width: 150px;" onchange="renderMonitoring()"><option value="ALL">Semua Ruangan</option></select>
+                <select id="filter-sesi" style="max-width: 140px;" onchange="renderMonitoring()"><option value="ALL">Semua Sesi</option></select>
+                <select id="sort-monitoring" style="max-width: 170px;" onchange="changeMonitoringSort(this.value)">
+                    <option value="pc_name-asc">Urut: Nama PC (A-Z)</option>
+                    <option value="pc_name-desc">Urut: Nama PC (Z-A)</option>
+                    <option value="status-asc">Urut: Status (Online First)</option>
+                    <option value="ruangan-asc">Urut: Ruangan</option>
+                </select>
+            </div>
+            
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-red btn-sm" onclick="shutdownAllOfflinePCs()">⚡ Matikan Seluruh PC Offline</button>
+                <button class="btn btn-yellow btn-sm" style="background:#6c757d; color:white;" onclick="cleanUpOldDuplicatesOnly()">🧹 Clean Database Usang (>24 Jam)</button>
+                <div class="view-toggle">
+                    <button class="toggle-btn active" id="btn-view-table" onclick="setViewMode('table')">📄 Tabel</button>
+                    <button class="toggle-btn" id="btn-view-card" onclick="setViewMode('card')">🔲 Card</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW TABEL DETAIL -->
+        <div id="view-container-table" class="scroll-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:30px;"><input type="checkbox" id="check-all" onchange="toggleSelectAll(this)"></th>
+                        <th onclick="sortTableHeader('status')">Status ↕</th>
+                        <th onclick="sortTableHeader('ruangan')">Ruangan & Posisi ↕</th>
+                        <th onclick="sortTableHeader('sesi')">Sesi ↕</th>
+                        <th onclick="sortTableHeader('pc_name')">PC / IP / Ver ↕</th>
+                        <th>Aktivitas Aktif (Window Title)</th>
+                        <th>Aksi Quick Edit</th>
+                    </tr>
+                </thead>
+                <tbody id="table-clients"></tbody>
+            </table>
+        </div>
+
+        <!-- VIEW CARD KOTAK OVAL RINGKAS -->
+        <div id="view-container-card" class="pc-grid" style="display: none;"></div>
+    </div>
+
+    <!-- TAB 2: PENGATURAN MASSAL -->
+    <div id="tab2" class="tab-content">
+        <h4>Pengaturan Massal Ruangan & Sesi</h4>
+        <div style="display: flex; gap: 8px; margin-bottom: 6px;">
+            <input type="text" id="cfg-search" placeholder="🔍 Cari PC / IP / MAC..." onkeyup="renderConfigTable()">
+            <button class="btn btn-blue btn-sm" style="white-space:nowrap;" id="btn-toggle-unassigned" onclick="toggleUnassignedOnly()">Tampilkan Semua PC</button>
+        </div>
+
+        <div class="info-bar" id="cfg-stats-bar">Tampil: 0 PC | Terpilih: 0 PC</div>
+
+        <div class="scroll-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:30px;"><input type="checkbox" onchange="toggleConfigSelectAll(this)"></th>
+                        <th onclick="sortTable('tab2', 'pc_name')">PC Name / IP ↕</th>
+                        <th onclick="sortTable('tab2', 'ruangan')">Ruangan ↕</th>
+                        <th onclick="sortTable('tab2', 'sesi')">Sesi ↕</th>
+                        <th>Keterangan Posisi</th>
+                    </tr>
+                </thead>
+                <tbody id="table-config-clients"></tbody>
+            </table>
+        </div>
+
+        <div class="panel-section">
+            <b style="font-size: 12px;">Terapkan ke PC Tercentang diatas:</b>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 5px;">
+                <input type="text" id="batch-ruangan" placeholder="Ruangan (misal: Lab B)">
+                <input type="text" id="batch-sesi" placeholder="Sesi (misal: Sesi 1)">
+                <input type="text" id="batch-ket" placeholder="Keterangan (misal: Baris 1)">
+            </div>
+            <button class="btn btn-green" onclick="saveBatchConfig()">Simpan & Terapkan Pengaturan</button>
+        </div>
+    </div>
+
+    <!-- TAB 3: CONTROL CENTER -->
+    <div id="tab3" class="tab-content">
+        <div class="target-box">
+            <b>🎯 Pengaturan Target Perintah:</b>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 5px; margin-bottom: 8px;">
+                <select id="ctrl-target-type" onchange="updateTargetList()">
+                    <option value="ALL">Semua PC Client</option>
+                    <option value="RUANG">Berdasarkan Ruangan</option>
+                    <option value="SESI">Berdasarkan Sesi</option>
+                    <option value="MANUAL">Pilih Manual (Custom)</option>
+                </select>
+                <select id="ctrl-filter-val" onchange="updateTargetList()" style="display:none;"></select>
+            </div>
+
+            <div style="display: flex; gap: 8px; margin-bottom: 6px;">
+                <input type="text" id="ctrl-search" placeholder="🔍 Cari Komputer (Nama / IP / MAC)..." onkeyup="filterTargetListUI()" style="margin: 0;">
+                <button class="btn btn-blue btn-sm" id="btn-select-all-manual" style="display:none; white-space:nowrap;" onclick="selectAllManual(true)">Pilih Semua</button>
+                <button class="btn btn-red btn-sm" id="btn-deselect-all-manual" style="display:none; white-space:nowrap;" onclick="selectAllManual(false)">Hapus Semua</button>
+            </div>
+
+            <div class="info-bar" id="ctrl-target-summary" style="background:#d1e7dd; color:#0f5132; margin-bottom: 4px;">0 Dari 0 Komputer Terpilih</div>
+            <div class="target-list" id="target-checkbox-list"></div>
+        </div>
+
+        <div class="panel-section" style="border-left: 4px solid #28a745; background: #f4fbf7;">
+            <div class="panel-title" style="color: #198754;">🚀 Push Auto-Update versi Client (.exe)</div>
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 8px; margin-bottom: 6px;">
+                <input type="text" id="update-ver" placeholder="Versi Baru (misal: 1.0.1)">
+                <input type="text" id="update-url" placeholder="Direct Link URL download file ClientLab.exe baru">
+            </div>
+            <button class="btn btn-green" onclick="pushAutoUpdate()">Publish Pembaruan OTA ke Seluruh Client</button>
+        </div>
+
+        <div class="panel-section">
+            <div class="panel-title">🔒 Keamanan & Penguncian Layar</div>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-red" onclick="setLockScreen(true)">🔒 Lock Screen Persistent</button>
+                <button class="btn btn-green" onclick="setLockScreen(false)">🔓 Unlock Screen</button>
+            </div>
+        </div>
+
+        <div class="panel-section">
+            <div class="panel-title">🧹 Sapu Bersih Dinamis (Custom Target Cleaner)</div>
+            <div style="display: flex; gap: 8px;">
+                <input type="text" id="cleanerInput" placeholder="Masukan kata kunci app/game (contoh: Roblox, Minecraft)">
+                <button class="btn btn-purple" style="width: auto; white-space: nowrap;" onclick="execCustomCleaner()">🧹 Sapu Bersih Target</button>
+            </div>
+        </div>
+
+        <div class="panel-section">
+            <div class="panel-title">🚀 Buka / Tutup Aplikasi</div>
+            <div class="form-group">
+                <input type="text" id="app-names" value="SafeExamBrowser, chrome, msedge, vlc" placeholder="Nama aplikasi pisahkan koma">
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-blue" onclick="sendCmd('RUN_APP', {apps: getAppArray()})">Buka Aplikasi</button>
+                <button class="btn btn-yellow" onclick="sendCmd('KILL_SPECIFIC_APPS', {apps: getAppArray()})">Tutup Aplikasi</button>
+                <button class="btn btn-yellow" style="background:#fd7e14; color:white;" onclick="sendKillUnapproved()">🛑 Kill App Non-Bawaan</button>
+                <button class="btn btn-red" onclick="sendCmd('KILL_ALL_APPS')">🔥 KILL ALL APPS</button>
+            </div>
+        </div>
+
+        <div class="panel-section">
+            <div class="panel-title">⚡ Control Daya & Sistem</div>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-yellow" onclick="sendCmd('RESTART_PC')">Restart PC</button>
+                <button class="btn btn-red" onclick="sendCmd('SHUTDOWN_PC')">Shutdown PC</button>
+                <button class="btn btn-red" style="background:#b02a37;" onclick="triggerMasterReset()">☣️ Master Reset (Hanya Whitelist)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 4: ANALISA PERILAKU SISWA -->
+    <div id="tab4" class="tab-content">
+        <div class="target-box">
+            <b>📊 Filter Target Analisa:</b>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 5px;">
+                <select id="anl-target-type" onchange="renderAnalisa()">
+                    <option value="ALL">Semua PC Client</option>
+                    <option value="RUANG">Berdasarkan Ruangan</option>
+                    <option value="SESI">Berdasarkan Sesi</option>
+                </select>
+                <select id="anl-filter-val" onchange="renderAnalisa()" style="display:none;"></select>
+            </div>
+        </div>
+        <div id="analisa-list"></div>
+    </div>
+</div>
+
+<script>
+    // --- KONFIGURASI FIREBASE SDK ---
+    const firebaseConfig = {
+        databaseURL: "https://aturlab-default-rtdb.asia-southeast1.firebasedatabase.app"
+    };
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.database();
+
+    let clientsData = {};
+    let currentViewMode = 'table'; 
+    let showOnlyUnassigned = true;
+    let selectedMacsTab1 = new Set(); 
+    let selectedMacsTab2 = new Set(); 
+    let activeEditMac = null;         
+
+    let disabledTargetMacsTab3 = new Set();
+    let manualSelectedMacsTab3 = new Set();
+
+    let sortState = {
+        tab1: { col: 'pc_name', asc: true },
+        tab2: { col: 'pc_name', asc: true }
+    };
+
+    // Fungsi Perapi Nama Komputer (BEEA4 -> BeeA4, BEEA9 -> BeeA9)
+    function fixPcNameFormat(str) {
+        if (!str) return '-';
+        if (/^BEE/i.test(str)) {
+            return 'Bee' + str.slice(3);
+        }
+        if (str === str.toUpperCase()) {
+            return str.toLowerCase().replace(/(?:^|[\s\-_])\w/g, m => m.toUpperCase());
+        }
+        return str;
+    }
+
+    db.ref("clients").on("value", (snapshot) => {
+        clientsData = snapshot.val() || {};
+        if (activeEditMac === null) {
+            updateDropdownFilters();
+            renderMonitoring();
+            renderConfigTable();
+            updateTargetList();
+            renderAnalisa();
+        }
+    });
+
+    function switchTab(evt, tabId) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        evt.currentTarget.classList.add('active');
+        document.getElementById(tabId).classList.add('active');
+    }
+
+    function setViewMode(mode) {
+        currentViewMode = mode;
+        document.getElementById('btn-view-table').classList.toggle('active', mode === 'table');
+        document.getElementById('btn-view-card').classList.toggle('active', mode === 'card');
+        document.getElementById('view-container-table').style.display = mode === 'table' ? 'block' : 'none';
+        document.getElementById('view-container-card').style.display = mode === 'card' ? 'grid' : 'none';
+        renderMonitoring();
+    }
+
+    function getVal(id) { return document.getElementById(id).value; }
+    function getAppArray() { return getVal('app-names').split(',').map(s => s.trim()).filter(s => s); }
+
+    function naturalCompare(a, b, asc = true) {
+        let res = String(a || '').localeCompare(String(b || ''), undefined, { numeric: true, sensitivity: 'base' });
+        return asc ? res : -res;
+    }
+
+    function changeMonitoringSort(val) {
+        let [col, dir] = val.split('-');
+        sortState.tab1.col = col;
+        sortState.tab1.asc = (dir === 'asc');
+        renderMonitoring();
+    }
+
+    function sortTableHeader(key) {
+        if (sortState.tab1.col === key) {
+            sortState.tab1.asc = !sortState.tab1.asc;
+        } else {
+            sortState.tab1.col = key;
+            sortState.tab1.asc = true;
+        }
+        document.getElementById('sort-monitoring').value = `${key}-${sortState.tab1.asc ? 'asc' : 'desc'}`;
+        renderMonitoring();
+    }
+
+    function updateDropdownFilters() {
+        let ruangans = new Set(), sesis = new Set();
+        for (let mac in clientsData) {
+            let cInfo = clientsData[mac].custom_info || {};
+            if (cInfo.ruangan) ruangans.add(cInfo.ruangan);
+            if (cInfo.sesi) sesis.add(cInfo.sesi);
+        }
+        updateSelectOptions('filter-ruangan', ruangans, "Semua Ruangan");
+        updateSelectOptions('filter-sesi', sesis, "Semua Sesi");
+    }
+
+    function updateSelectOptions(id, setObj, defaultLabel) {
+        const sel = document.getElementById(id);
+        let currVal = sel.value;
+        sel.innerHTML = `<option value="ALL">${defaultLabel}</option>`;
+        Array.from(setObj).sort((a,b) => naturalCompare(a,b,true)).forEach(val => {
+            sel.innerHTML += `<option value="${val}">${val}</option>`;
+        });
+        sel.value = currVal || "ALL";
+    }
+
+    function getSortedClientsArray(tab) {
+        const now = Math.floor(Date.now() / 1000);
+        let arr = [];
+        for (let mac in clientsData) {
+            let c = clientsData[mac];
+            let cInfo = c.custom_info || {};
+            let isOnline = (now - (c.last_seen || 0)) < 25; // Toleransi heartbeat 25 detik
+            arr.push({
+                mac: mac,
+                pc_name: fixPcNameFormat(c.pc_name || mac),
+                ip: c.ip || '',
+                version: c.version || '1.0.0',
+                ruangan: cInfo.ruangan || '',
+                sesi: cInfo.sesi || '',
+                keterangan: cInfo.keterangan || '',
+                status: isOnline ? 'ONLINE' : 'OFFLINE',
+                raw: c
+            });
+        }
+        
+        let sortCol = sortState[tab].col;
+        let sortAsc = sortState[tab].asc;
+        arr.sort((a, b) => naturalCompare(a[sortCol], b[sortCol], sortAsc));
+        return arr;
+    }
+
+    // ================= TAB 1: MONITORING RENDER =================
+    function renderMonitoring() {
+        if (currentViewMode === 'table') {
+            renderTable();
+        } else {
+            renderCards();
+        }
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById('table-clients');
+        tbody.innerHTML = '';
+        
+        let total = 0, online = 0, offline = 0, net = 0;
+        const filterR = getVal('filter-ruangan');
+        const filterS = getVal('filter-sesi');
+
+        let sortedList = getSortedClientsArray('tab1');
+
+        sortedList.forEach(item => {
+            let c = item.raw;
+            let mac = item.mac;
+            let isOnline = item.status === 'ONLINE';
+
+            total++;
+            if (isOnline) online++; else offline++;
+            if (c.internet && c.internet.connected) net++;
+
+            let cInfo = c.custom_info || {};
+            let ruang = cInfo.ruangan || '';
+            let sesi = cInfo.sesi || '';
+
+            if (filterR !== 'ALL' && ruang !== filterR) return;
+            if (filterS !== 'ALL' && sesi !== filterS) return;
+
+            let isChecked = selectedMacsTab1.has(mac) ? 'checked' : '';
+            let activeWindow = c.active_window || '-';
+
+            if (activeEditMac === mac) {
+                let row = `<tr id="row-${mac}">
+                    <td><input type="checkbox" class="pc-select" value="${mac}" ${isChecked} onchange="updateSelectedSet('tab1', '${mac}', this.checked)"></td>
+                    <td><span class="badge ${isOnline ? 'bg-success':'bg-danger'}">${item.status}</span></td>
+                    <td>
+                        <input type="text" id="edit-r-${mac}" value="${cInfo.ruangan||''}" placeholder="Ruangan" style="margin-bottom:2px;"><br>
+                        <input type="text" id="edit-k-${mac}" value="${cInfo.keterangan||''}" placeholder="Keterangan Posisi">
+                    </td>
+                    <td><input type="text" id="edit-s-${mac}" value="${cInfo.sesi||''}" placeholder="Sesi"></td>
+                    <td><b>${item.pc_name}</b><br><small>${item.ip || '-'}</small><br><small style="color:#6f42c1;">v${item.version}</small></td>
+                    <td><small style="color:#007bff; font-weight:bold;">${activeWindow}</small></td>
+                    <td>
+                        <button class="btn btn-green btn-sm" onclick="saveInlineEdit('${mac}')">Simpan</button>
+                        <button class="btn btn-red btn-sm" onclick="cancelInlineEdit()">Batal</button>
+                    </td>
+                </tr>`;
+                tbody.innerHTML += row;
+            } else {
+                let row = `<tr id="row-${mac}">
+                    <td><input type="checkbox" class="pc-select" value="${mac}" ${isChecked} onchange="updateSelectedSet('tab1', '${mac}', this.checked)"></td>
+                    <td><span class="badge ${isOnline ? 'bg-success':'bg-danger'}">${item.status}</span></td>
+                    <td><span class="disp-ruang">${ruang || '<i style="color:#888;">Unassigned</i>'}</span><br><small class="disp-ket">${cInfo.keterangan || '-'}</small></td>
+                    <td><span class="disp-sesi">${sesi || '-'}</span></td>
+                    <td><b>${item.pc_name}</b><br><small>${item.ip || '-'}</small><br><small style="color:#6f42c1;">v${item.version}</small></td>
+                    <td><small style="color:#007bff; font-weight:500;">${activeWindow}</small></td>
+                    <td><button class="btn btn-blue btn-sm" onclick="inlineEdit('${mac}')">Edit</button></td>
+                </tr>`;
+                tbody.innerHTML += row;
+            }
+        });
+
+        updateSummaryBar(total, online, offline, net);
+    }
+
+    function renderCards() {
+        const grid = document.getElementById('view-container-card');
+        grid.innerHTML = '';
+
+        let total = 0, online = 0, offline = 0, net = 0;
+        const filterR = getVal('filter-ruangan');
+        const filterS = getVal('filter-sesi');
+
+        let sortedList = getSortedClientsArray('tab1');
+
+        sortedList.forEach(item => {
+            let c = item.raw;
+            let isOnline = item.status === 'ONLINE';
+
+            total++;
+            if (isOnline) online++; else offline++;
+            if (c.internet && c.internet.connected) net++;
+
+            let cInfo = c.custom_info || {};
+            let ruang = cInfo.ruangan || 'No Lab';
+            let sesi = cInfo.sesi || 'No Sesi';
+
+            if (filterR !== 'ALL' && cInfo.ruangan !== filterR) return;
+            if (filterS !== 'ALL' && cInfo.sesi !== filterS) return;
+
+            let activeWindow = c.active_window || 'Desktop / Idle';
+
+            let cardHtml = `
+            <div class="pc-card ${isOnline ? 'online' : ''}">
+                <div class="pc-card-header">
+                    <span class="pc-card-title">${item.pc_name}</span>
+                    <span class="badge ${isOnline ? 'bg-success':'bg-danger'}">${item.status}</span>
+                </div>
+                <div class="pc-card-sub">
+                    <b>${item.ip || '-'}</b> • ${ruang} (${sesi})
+                </div>
+                <div class="pc-card-app" title="${activeWindow}">
+                    🖥️ ${activeWindow}
+                </div>
+            </div>`;
+            grid.innerHTML += cardHtml;
+        });
+
+        updateSummaryBar(total, online, offline, net);
+    }
+
+    function updateSummaryBar(total, online, offline, net) {
+        document.getElementById('cnt-total').innerText = total;
+        document.getElementById('cnt-online').innerText = online;
+        document.getElementById('cnt-offline').innerText = offline;
+        document.getElementById('cnt-net').innerText = net;
+        document.getElementById('cnt-selected').innerText = selectedMacsTab1.size;
+    }
+
+    function updateSelectedSet(tab, mac, isChecked) {
+        let setObj = (tab === 'tab1') ? selectedMacsTab1 : selectedMacsTab2;
+        if (isChecked) setObj.add(mac); else setObj.delete(mac);
+        if (tab === 'tab1') document.getElementById('cnt-selected').innerText = selectedMacsTab1.size;
+        if (tab === 'tab2') renderConfigTable();
+    }
+
+    function inlineEdit(mac) { activeEditMac = mac; renderMonitoring(); }
+    function cancelInlineEdit() { activeEditMac = null; renderMonitoring(); }
+
+    function saveInlineEdit(mac) {
+        let payload = {
+            ruangan: document.getElementById(`edit-r-${mac}`).value,
+            sesi: document.getElementById(`edit-s-${mac}`).value,
+            keterangan: document.getElementById(`edit-k-${mac}`).value
+        };
+        db.ref(`clients/${mac}/custom_info`).set(payload).then(() => {
+            activeEditMac = null;
+        });
+    }
+
+    function toggleSelectAll(master) {
+        document.querySelectorAll('.pc-select').forEach(cb => {
+            cb.checked = master.checked;
+            updateSelectedSet('tab1', cb.value, master.checked);
+        });
+    }
+
+    // --- PEMBERSIHAN AMAN: HANYA HAPUS DATA YANG BENAR-BENAR USANG (>24 JAM) ---
+    function cleanUpOldDuplicatesOnly() {
+        const now = Math.floor(Date.now() / 1000);
+        let toDelete = [];
+        
+        for (let mac in clientsData) {
+            let lastSeen = clientsData[mac].last_seen || 0;
+            // Hanya hapus jika PC tidak aktif lebih dari 24 jam (86.400 detik)
+            if ((now - lastSeen) > 86400) {
+                toDelete.push(mac);
+            }
+        }
+
+        if (toDelete.length === 0) {
+            alert("Sistem Bersih! Tidak ada data PC tua/usang yang lebih dari 24 jam.");
+            return;
+        }
+
+        if (confirm(`Ditemukan ${toDelete.length} entry PC usang yang tidak pernah aktif >24 jam. Hapus dari database?`)) {
+            let updates = {};
+            toDelete.forEach(mac => updates[`clients/${mac}`] = null);
+            db.ref().update(updates).then(() => {
+                alert("Berhasil membersihkan data PC usang!");
+            });
+        }
+    }
+
+    // --- PERINTAH SHUTDOWN SELURUH PC OFFLINE ---
+    function shutdownAllOfflinePCs() {
+        const now = Math.floor(Date.now() / 1000);
+        let offlineMacs = [];
+        for (let mac in clientsData) {
+            let isOnline = (now - (clientsData[mac].last_seen || 0)) < 25;
+            if (!isOnline) offlineMacs.push(mac);
+        }
+
+        if (offlineMacs.length === 0) {
+            alert("Tidak ada PC yang berstatus offline.");
+            return;
+        }
+
+        if (confirm(`Kirim perintah Shutdown ke ${offlineMacs.length} PC yang berstatus Offline?`)) {
+            let body = { action: 'SHUTDOWN_PC', target_macs: offlineMacs, timestamp: Date.now() };
+            db.ref('commands').set(body).then(() => alert(`Perintah Shutdown dikirim ke PC Offline!`));
+        }
+    }
+
+    // ================= TAB 2: PENGATURAN MASSAL =================
+    function toggleUnassignedOnly() {
+        showOnlyUnassigned = !showOnlyUnassigned;
+        document.getElementById('btn-toggle-unassigned').innerText = showOnlyUnassigned ? "Tampilkan Semua PC" : "Tampilkan PC Unassigned Saja";
+        renderConfigTable();
+    }
+
+    function renderConfigTable() {
+        const tbody = document.getElementById('table-config-clients');
+        tbody.innerHTML = '';
+        let query = getVal('cfg-search').toLowerCase();
+
+        let sortedList = getSortedClientsArray('tab2');
+        let displayedCount = 0;
+
+        sortedList.forEach(item => {
+            let c = item.raw;
+            let mac = item.mac;
+            let cInfo = c.custom_info || {};
+            let isUnassigned = !cInfo.ruangan && !cInfo.sesi;
+
+            if (showOnlyUnassigned && !isUnassigned) return;
+
+            let matchSearch = item.pc_name.toLowerCase().includes(query) || item.ip.toLowerCase().includes(query) || mac.toLowerCase().includes(query);
+            if (!matchSearch) return;
+
+            displayedCount++;
+            let isChecked = selectedMacsTab2.has(mac) ? 'checked' : '';
+
+            let row = `<tr>
+                <td><input type="checkbox" class="cfg-select" value="${mac}" ${isChecked} onchange="updateSelectedSet('tab2', '${mac}', this.checked)"></td>
+                <td><b>${item.pc_name}</b><br><small>${item.ip || '-'}</small></td>
+                <td>${cInfo.ruangan || '<b style="color:red;">Unassigned</b>'}</td>
+                <td>${cInfo.sesi || '-'}</td>
+                <td>${cInfo.keterangan || '-'}</td>
+            </tr>`;
+            tbody.innerHTML += row;
+        });
+
+        document.getElementById('cfg-stats-bar').innerText = `Tampil: ${displayedCount} PC | Terpilih: ${selectedMacsTab2.size} PC`;
+    }
+
+    function toggleConfigSelectAll(master) {
+        document.querySelectorAll('.cfg-select').forEach(cb => {
+            cb.checked = master.checked;
+            updateSelectedSet('tab2', cb.value, master.checked);
+        });
+        renderConfigTable();
+    }
+
+    function saveBatchConfig() {
+        if (selectedMacsTab2.size === 0) {
+            alert("Pilih/centang minimal 1 PC dari tabel pengaturan!");
+            return;
+        }
+
+        let r = getVal('batch-ruangan');
+        let s = getVal('batch-sesi');
+        let k = getVal('batch-ket');
+
+        let updates = {};
+        selectedMacsTab2.forEach(mac => {
+            updates[`clients/${mac}/custom_info`] = { ruangan: r, sesi: s, keterangan: k };
+        });
+
+        db.ref().update(updates).then(() => {
+            alert("Pengaturan Berhasil Diterapkan!");
+            selectedMacsTab2.clear();
+            renderConfigTable();
+        });
+    }
+
+    // ================= TAB 3: CONTROL CENTER =================
+    function updateTargetList() {
+        const type = getVal('ctrl-target-type');
+        const filterValSel = document.getElementById('ctrl-filter-val');
+        const btnSelectAll = document.getElementById('btn-select-all-manual');
+        const btnDeselectAll = document.getElementById('btn-deselect-all-manual');
+
+        filterValSel.style.display = 'none';
+        btnSelectAll.style.display = 'none';
+        btnDeselectAll.style.display = 'none';
+
+        if (type === 'RUANG' || type === 'SESI') {
+            filterValSel.style.display = 'block';
+            let key = type === 'RUANG' ? 'ruangan' : 'sesi';
+            let uniqueVals = new Set();
+            for (let mac in clientsData) {
+                let v = clientsData[mac].custom_info?.[key];
+                if (v) uniqueVals.add(v);
+            }
+            
+            let currVal = filterValSel.value;
+            filterValSel.innerHTML = '';
+            Array.from(uniqueVals).sort((a,b) => naturalCompare(a,b,true)).forEach(val => {
+                filterValSel.innerHTML += `<option value="${val}">${val}</option>`;
+            });
+            if (currVal && uniqueVals.has(currVal)) filterValSel.value = currVal;
+        } else if (type === 'MANUAL') {
+            btnSelectAll.style.display = 'inline-block';
+            btnDeselectAll.style.display = 'inline-block';
+        }
+
+        renderTargetItems();
+    }
+
+    function renderTargetItems() {
+        const type = getVal('ctrl-target-type');
+        const checkboxList = document.getElementById('target-checkbox-list');
+        checkboxList.innerHTML = '';
+
+        let targetClients = [];
+
+        if (type === 'ALL' || type === 'MANUAL') {
+            for (let mac in clientsData) targetClients.push({ mac: mac, ...clientsData[mac] });
+        } else if (type === 'RUANG' || type === 'SESI') {
+            let key = type === 'RUANG' ? 'ruangan' : 'sesi';
+            let selectedGroup = getVal('ctrl-filter-val');
+            for (let mac in clientsData) {
+                if (clientsData[mac].custom_info?.[key] === selectedGroup) {
+                    targetClients.push({ mac: mac, ...clientsData[mac] });
+                }
+            }
+        }
+
+        targetClients.sort((a, b) => naturalCompare(fixPcNameFormat(a.pc_name) || a.mac, fixPcNameFormat(b.pc_name) || b.mac, true));
+
+        targetClients.forEach(c => {
+            let mac = c.mac;
+            let pcName = fixPcNameFormat(c.pc_name || mac);
+            let ip = c.ip || '-';
+            let cInfo = c.custom_info || {};
+            let isChecked = (type === 'MANUAL') ? manualSelectedMacsTab3.has(mac) : !disabledTargetMacsTab3.has(mac);
+
+            let itemHtml = `
+            <div class="target-item" data-search="${pcName.toLowerCase()} ${ip.toLowerCase()} ${mac.toLowerCase()}">
+                <label style="display:flex; align-items:center; width:100%; margin:0; cursor:pointer;">
+                    <input type="checkbox" class="target-exec-check" value="${mac}" ${isChecked ? 'checked' : ''} onchange="toggleTargetItem('${mac}', this.checked)">
+                    <div class="target-info">
+                        <span><b>${pcName}</b> <small style="color:#666;">(${ip})</small></span>
+                        <span style="font-size:11px; color:#007bff; background:#e7f1ff; padding:2px 6px; border-radius:4px;">${cInfo.ruangan || 'No Lab'} - ${cInfo.sesi || 'No Sesi'}</span>
+                    </div>
+                </label>
+            </div>`;
+            checkboxList.innerHTML += itemHtml;
+        });
+
+        filterTargetListUI();
+        recalculateTargetStats();
+    }
+
+    function filterTargetListUI() {
+        let q = getVal('ctrl-search').toLowerCase();
+        document.querySelectorAll('#target-checkbox-list .target-item').forEach(el => {
+            let match = el.getAttribute('data-search').includes(q);
+            el.style.display = match ? 'flex' : 'none';
+        });
+    }
+
+    function toggleTargetItem(mac, isChecked) {
+        let type = getVal('ctrl-target-type');
+        if (type === 'MANUAL') {
+            if (isChecked) manualSelectedMacsTab3.add(mac); else manualSelectedMacsTab3.delete(mac);
+        } else {
+            if (!isChecked) disabledTargetMacsTab3.add(mac); else disabledTargetMacsTab3.delete(mac);
+        }
+        recalculateTargetStats();
+    }
+
+    function selectAllManual(status) {
+        for (let mac in clientsData) {
+            if (status) manualSelectedMacsTab3.add(mac); else manualSelectedMacsTab3.delete(mac);
+        }
+        renderTargetItems();
+    }
+
+    function recalculateTargetStats() {
+        let targets = getSelectedTargets();
+        let totalScope = Object.keys(clientsData).length;
+        const summaryBox = document.getElementById('ctrl-target-summary');
+        summaryBox.innerText = `🎯 Target Aktif: ${targets.length} Dari ${totalScope} Komputer Terpilih`;
+    }
+
+    function getSelectedTargets() {
+        let tType = getVal('ctrl-target-type');
+        if (tType === 'MANUAL') {
+            return Array.from(manualSelectedMacsTab3);
+        } else {
+            let targets = [];
+            document.querySelectorAll('.target-exec-check:checked').forEach(cb => targets.push(cb.value));
+            return targets;
+        }
+    }
+
+    function pushAutoUpdate() {
+        let ver = getVal('update-ver').trim();
+        let url = getVal('update-url').trim();
+        if (!ver || !url) { alert("Harap isi versi baru dan direct link URL installer file .exe!"); return; }
+
+        db.ref('system_config/latest_version').set({ version: ver, url: url }).then(() => {
+            alert(`Pembaruan v${ver} berhasil di-publish! PC Client akan mengunduh dan menimpa aplikasinya secara otomatis.`);
+        });
+    }
+
+    function sendCmd(action, extraPayload = {}) {
+        let targets = getSelectedTargets();
+        if (targets.length === 0) { alert("Tidak ada target PC yang dipilih!"); return; }
+
+        let body = { action: action, target_macs: targets, timestamp: Date.now(), ...extraPayload };
+        db.ref('commands').set(body).then(() => alert(`Perintah ${action} dikirim ke ${targets.length} PC!`));
+    }
+
+    function setLockScreen(status) {
+        let targets = getSelectedTargets();
+        if (targets.length === 0) { alert("Pilih target PC terlebih dahulu!"); return; }
+        targets.forEach(key => db.ref(`clients/${key}/status_lock`).set(status));
+        alert(`Status Lock Screen set ke (${status}) untuk ${targets.length} PC!`);
+    }
+
+    function execCustomCleaner() {
+        const query = getVal("cleanerInput").trim();
+        if (!query) { alert("Masukkan kata kunci aplikasi yang ingin dibersihkan!"); return; }
+        let targets = getSelectedTargets();
+        targets.forEach(key => db.ref(`clients/${key}/clean_target`).set(query));
+        alert(`Perintah Sapu Bersih '${query}' dikirim ke ${targets.length} PC!`);
+        document.getElementById("cleanerInput").value = "";
+    }
+
+    function sendKillUnapproved() {
+        let targets = getSelectedTargets();
+        targets.forEach(key => db.ref(`clients/${key}/action`).set("kill_unapproved"));
+        alert(`Perintah Kill App Non-Bawaan dikirim ke ${targets.length} PC!`);
+    }
+
+    function triggerMasterReset() {
+        if (confirm("⚠️ PERINGATAN: Lakukan Master Reset?")) {
+            let targets = getSelectedTargets();
+            targets.forEach(key => db.ref(`clients/${key}/action`).set("master_reset"));
+            alert(`Perintah Master Reset dikirim ke ${targets.length} PC!`);
+        }
+    }
+
+    // ================= TAB 4: ANALISA PERILAKU SISWA =================
+    function renderAnalisa() {
+        const container = document.getElementById('analisa-list');
+        const tType = getVal('anl-target-type');
+        const filterValSel = document.getElementById('anl-filter-val');
+
+        if (tType === 'RUANG' || tType === 'SESI') {
+            filterValSel.style.display = 'block';
+            let key = tType === 'RUANG' ? 'ruangan' : 'sesi';
+            let uniqueVals = new Set();
+            for (let mac in clientsData) {
+                let v = clientsData[mac].custom_info?.[key];
+                if (v) uniqueVals.add(v);
+            }
+
+            let currVal = filterValSel.value;
+            filterValSel.innerHTML = '';
+            Array.from(uniqueVals).sort((a,b) => naturalCompare(a,b,true)).forEach(val => {
+                filterValSel.innerHTML += `<option value="${val}">${val}</option>`;
+            });
+            if (currVal && uniqueVals.has(currVal)) filterValSel.value = currVal;
+        } else {
+            filterValSel.style.display = 'none';
+        }
+
+        let selectedVal = filterValSel.value;
+        container.innerHTML = '';
+
+        let sortedClients = [];
+        for (let mac in clientsData) {
+            sortedClients.push({ mac: mac, ...clientsData[mac] });
+        }
+        sortedClients.sort((a, b) => naturalCompare(fixPcNameFormat(a.pc_name) || a.mac, fixPcNameFormat(b.pc_name) || b.mac, true));
+
+        sortedClients.forEach(c => {
+            let cInfo = c.custom_info || {};
+
+            if (tType === 'RUANG' && cInfo.ruangan !== selectedVal) return;
+            if (tType === 'SESI' && cInfo.sesi !== selectedVal) return;
+
+            let blocks = c.activity_blocks || {};
+            let cardHtml = `<div class="card" style="text-align:left; margin-bottom:10px;">
+                <b>🖥️ ${fixPcNameFormat(c.pc_name) || c.mac} [Lab: ${cInfo.ruangan || '-'} | Sesi: ${cInfo.sesi || '-'}]</b>
+                <p style="text-align:left; color:#007bff; margin-top:2px; margin-bottom:8px;"><b>Layar Aktif:</b> ${c.active_window || '-'}</p>`;
+
+            let hasBlocks = false;
+            for (let appGroup in blocks) {
+                hasBlocks = true;
+                let totalMin = Math.round((blocks[appGroup].total_seconds || 0) / 60);
+                let details = blocks[appGroup].details || {};
+
+                cardHtml += `<details>
+                    <summary>📁 ${appGroup} (Total: ~${totalMin} Menit / ${blocks[appGroup].total_seconds || 0} detik)</summary>
+                    <div class="sub-tree">`;
+                
+                for (let subTitle in details) {
+                    let subMin = Math.round(details[subTitle] / 60);
+                    cardHtml += `<div style="margin:2px 0;">├── <b>${subTitle}</b> → <span style="color:#28a745;">~${subMin} Menit (${details[subTitle]}s)</span></div>`;
+                }
+                cardHtml += `</div></details>`;
+            }
+
+            if (!hasBlocks) {
+                cardHtml += `<small style="color:#888;">Belum ada riwayat aktivitas blok tercatat.</small>`;
+            }
+
+            cardHtml += `</div>`;
+            container.innerHTML += cardHtml;
+        });
+    }
+</script>
+
+</body>
+</html>
